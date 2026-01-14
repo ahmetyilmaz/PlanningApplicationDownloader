@@ -1,39 +1,6 @@
 var planning_portals = []
 
 /**
- * Send getSummary request
- */
-var sendGetSummary = function(info, tab) {
-  chrome.tabs.query({
-    active: true,
-    currentWindow: true
-  }, function(tabs) {
-    // Send message to get-summary.js
-    chrome.tabs.sendMessage(tabs[0].id, {
-      message: 'getSummary'
-    })
-  })
-}
-
-/**
- * Send getAssets request
- */
-var sendGetAssets = function(info, tab) {
-  chrome.tabs.query({
-    active: true,
-    currentWindow: true
-  }, function(tabs) {
-    // Send message to get-assets.js
-    chrome.tabs.sendMessage(tabs[0].id, {
-      message: 'getAssets'
-    })
-  })
-
-  // Download the application summary as well
-  sendGetSummary(info, tab)
-}
-
-/**
  * Download assets
  */
 var downloadAssets = function(assets) {
@@ -50,31 +17,41 @@ var downloadAssets = function(assets) {
 }
 
 /**
- * Context menu entry for Download All
+ * Create context menu entries
  */
 chrome.contextMenus.create({
+  id: 'download-all-documents',
   title: 'Download All Application Documents',
-  onclick: sendGetAssets,
   documentUrlPatterns: planning_portals
 })
 
-/**
- * Context menu entry for Download Summary
- */
 chrome.contextMenus.create({
+  id: 'download-summary',
   title: 'Download Application Summary',
-  onclick: sendGetSummary,
   documentUrlPatterns: planning_portals
 })
 
 /**
- * Message listener
+ * Context menu click handler
+ */
+chrome.contextMenus.onClicked.addListener(function(info, tab) {
+  if(info.menuItemId === 'download-all-documents') {
+    // Send getAssets message
+    chrome.tabs.sendMessage(tab.id, { message: 'getAssets' })
+    // Also get summary
+    chrome.tabs.sendMessage(tab.id, { message: 'getSummary' })
+  }
+  else if(info.menuItemId === 'download-summary') {
+    // Send getSummary message
+    chrome.tabs.sendMessage(tab.id, { message: 'getSummary' })
+  }
+})
+
+/**
+ * Message listener for download requests from content scripts
  */
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if(request.message === 'downloadAssets') {
     downloadAssets(request.assets)
-  }
-  else {
-    alert('Planning Application Downloader: unknown message: ' + request.message)
   }
 })
